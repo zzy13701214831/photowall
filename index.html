@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	
+	<title>photowall</title>
+	<style type= "text/css">
+		* {
+			margin: 0;
+			padding: 0;
+		}
+		#photo {
+			width: 680px;
+			height: 500px;
+			margin: 50px auto;
+		}
+		#photo ul li {
+			list-style: none;
+			width: 200px;
+			height: 200px;
+			float:left;
+			margin: 10px;
+		}
+		#photo ul img {
+
+		}
+	</style>
+</head>
+<body>
+	<div id="photo">
+		<ul>
+			<li><img src="images/1.png" alt=""></li>
+			<li><img src="images/2.png" alt=""></li>
+			<li><img src="images/3.png" alt=""></li>
+			<li><img src="images/4.png" alt=""></li>
+			<li><img src="images/5.png" alt=""></li>
+			<li><img src="images/6.png" alt=""></li>
+			<li><img src="images/7.png" alt=""></li>
+			<li><img src="images/8.png" alt=""></li>
+			<li><img src="images/9.png" alt=""></li>
+		</ul>
+	</div>
+	<script type="text/javascript" src="js/move.js" ></script>
+
+	<script type = "text/javascript">
+		// 面向过程的函数式封装
+		// 面向对象
+		// 0、浮动布局改为定位布局
+		// 1、拖拽事件
+		// 2、碰撞检测
+		// 3、计算碰撞成功的距离最近的li
+		// 4、鼠标松开后交换碰撞成功的图片位置
+		// 
+		// 0、浮动布局改为定位布局
+		var aLi = document.getElementsByTagName("li");
+		var arr =[];
+		for (var i = 0; i < aLi.length; i++) 
+		{
+			arr.push([aLi[ i ].offsetLeft , aLi[ i ].offsetTop ]);
+		}
+
+		for (var i=0 ;i<aLi.length ;i++)
+		{
+			aLi[i].style.position = "absolute";
+			aLi[i].style.left = arr[i][0] + 'px';
+			aLi[i].style.top = arr[i][1] + 'px';
+			aLi[i].style.margin = 0;
+
+		}
+		// 1、拖拽事件
+		for (var i = 0;i < aLi.length; i++)
+		{
+			aLi[i].index = i;//添加索引
+			drag(aLi[i]);
+		} 
+
+		function drag (obj) {
+			obj.onmousedown = function(e){//为每一个li绑定鼠标按下移动方法
+				var e = e || window.event;//兼容浏览器
+				//获取鼠标坐标
+				var x0 = e.clientX;
+				var y0 = e.clientY;
+				//获取li原来的位置
+				var l = obj.offsetLeft;
+				var t = obj.offsetTop;
+				//改变拖拽li的层级
+				for (var i = 0; i < aLi.length; i++)
+				{
+					aLi[i].style.zIndex = 1;
+				}
+				this.style.zIndex = 10;
+				//随着鼠标移动
+				document.onmousemove = function(e) {
+					var e = e || window.event;
+					var _left = e.clientX - x0 + l;
+					var _top = e.clientY - y0 + t;
+					obj.style.left = _left + 'px';
+					obj.style.top = _top + 'px';
+					
+					for (var i = 0; i < aLi.length; i++) {
+						aLi[i].style.border = "none";
+					}
+					var oLi = nearLi(obj);//碰撞成功则得到最近的li
+
+					if( oLi ){
+						oLi.style.border = "2px solid red";
+					}
+				}
+				//松开解绑移动方法
+				document.onmouseup = function() {
+					document.onmousemove = null;
+					document.onmouseup = null;
+					// 4、鼠标松开后交换碰撞成功的图片位置
+					var nL = nearLi(obj);
+					var tmp = 0;//中间量
+					if(nL) {//让碰撞成功的li和拖拽的obj交换
+						move(nL,{left:arr[obj.index][0],top:arr[obj.index][1]});
+						move(obj,{left:arr[nL.index][0],top:arr[nL.index][1]});
+						nL.style.border = "none";
+						//交换索引
+						tmp = obj.index;
+						obj.index = nL.index;
+						nL.index = tmp;
+					}
+					else {//碰撞不成功 恢复原位
+						move(obj,{left:arr[obj.index][0],top:arr[obj.index][1]});
+					}
+				}
+				return false;
+			}
+		}
+		
+		// 2、碰撞检测  返回一个布尔值
+		function impact( obj1,obj2 ) {
+			var t1 = obj1.offsetTop,
+				l1 = obj1.offsetLeft,
+				b1 = t1 +  obj1.offsetHeight,
+				r1 = l1 + obj1.offsetWidth;
+
+			var t2 = obj2.offsetTop,
+				l2 = obj2.offsetLeft,
+				b2 = t2 + obj2.offsetHeight,
+				r2 = l2 + obj2.offsetWidth;
+
+			if( t2>b1 || l2>r1 || r2<l1 || b2<t1 ){
+				return false;//碰撞不成功
+			}else{
+				return true;
+			}
+		}
+		// 3、计算碰撞成功的距离最近的li
+		function distance( obj1,obj2 ) {//计算距离
+			var a = obj1.offsetLeft - obj2.offsetLeft;
+			var b = obj1.offsetTop - obj2.offsetTop;
+			return Math.sqrt( a * a + b * b );
+		}
+		function nearLi(obj) {
+			var n = 100000;
+			var oLi = '';//中间量
+			for (var i = 0; i < aLi.length; i++) {
+				if(impact(obj,aLi[i]) && obj != aLi[i]){
+					var c = distance( obj , aLi[i] );
+					//判断比较出最小值
+					if(c < n){
+						n = c;
+						//console.log(n);
+						oLi = aLi[i];//获取距离最近的的li
+					}
+				}
+			}
+			return oLi;
+		}
+		
+		
+	</script>
+</body>
+	
+</html>
